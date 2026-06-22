@@ -42,11 +42,6 @@ export function countryFields(lgaKey, lalc) {
   // else honest NA + statewide links.
   fields.push(curatedOrNa('Cultural significance', lga, hasNotes, sw.significance.links))
   fields.push(curatedOrNa('Historical context', lga, hasNotes, sw.history.links))
-  fields.push(
-    field('Seasonal calendar', 'Indigenous seasonal knowledge — see source', KIND.LINK, {
-      links: [...sw.seasonal.links, ...(lga?.seasonalLinks || [])],
-    })
-  )
 
   return fields
 }
