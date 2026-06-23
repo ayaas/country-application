@@ -95,8 +95,15 @@ export default function App() {
     try {
       const map = mapRef.current
       if (map) {
+        // The cover plan must read as a flat 2D map, regardless of how the
+        // user has the live map tilted/rotated — flatten it just for the
+        // snapshot, then restore their view.
+        const prevBearing = map.getBearing()
+        const prevPitch = map.getPitch()
+        map.jumpTo({ bearing: 0, pitch: 0 })
         await waitForIdle(map)
         setMapImage(snapshotMap(map))
+        map.jumpTo({ bearing: prevBearing, pitch: prevPitch })
       }
       await new Promise((r) => setTimeout(r, 150)) // let report DOM paint the snapshot
       // Prefer the resolved address for the filename; fall back to locality

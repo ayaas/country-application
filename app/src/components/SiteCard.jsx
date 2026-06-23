@@ -25,9 +25,7 @@ export default function SiteCard({ field }) {
           <div className="label">{field.label}</div>
           <div className={`value ${muted ? 'muted' : ''}`}>{field.value}</div>
           {field.note && <div className="note">{field.note}</div>}
-          {field.source && field.kind === 'official' && (
-            <div className="src">Source: {field.source}</div>
-          )}
+          {field.source && <div className="src">Source: {field.source}</div>}
         </div>
         <ProvenanceChip kind={field.kind} />
       </div>

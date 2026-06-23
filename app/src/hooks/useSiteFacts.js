@@ -153,12 +153,16 @@ export function useSiteFacts(confirmed) {
       const planning = [
         p.zoning
           ? field('Zoning', `${p.zoning.label || ''} — ${p.zoning.class || ''}`.replace(/^ — | — $/, ''), KIND.OFFICIAL, { source: SOURCES.planning, links: PLANNING_LINK })
-          : naField('Zoning', PLANNING_LINK),
+          : naField('Zoning', PLANNING_LINK, SOURCES.planning),
         p.height
           ? officialField('Height of building', `${p.height.value} ${p.height.units}`, SOURCES.planning)
-          : naField('Height of building'),
-        p.fsr ? officialField('Floor space ratio', `${p.fsr.value}:1`, SOURCES.planning) : naField('Floor space ratio'),
-        p.minLotSize ? officialField('Minimum lot size', `${p.minLotSize.value} ${p.minLotSize.units}`, SOURCES.planning) : naField('Minimum lot size'),
+          : naField('Height of building', undefined, SOURCES.planning),
+        p.fsr
+          ? officialField('Floor space ratio', `${p.fsr.value}:1`, SOURCES.planning)
+          : naField('Floor space ratio', undefined, SOURCES.planning),
+        p.minLotSize
+          ? officialField('Minimum lot size', `${p.minLotSize.value} ${p.minLotSize.units}`, SOURCES.planning)
+          : naField('Minimum lot size', undefined, SOURCES.planning),
         p.heritage
           ? field('Heritage', `${p.heritage.name || p.heritage.class}${p.heritage.significance ? ' · ' + p.heritage.significance : ''}`, KIND.OFFICIAL, { source: SOURCES.planning })
           : field('Heritage', 'No heritage listing mapped at this point', KIND.NA),

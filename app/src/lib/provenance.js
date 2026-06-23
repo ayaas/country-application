@@ -26,13 +26,15 @@ export function loadingField(label) {
   return { label, value: '…', kind: KIND.LOADING }
 }
 
-/** A field that resolved to nothing — honest "not available", never a guess. */
-export function naField(label, links) {
-  return { label, value: 'Not available — see links', kind: KIND.NA, links }
+/** A field that resolved to nothing — honest "not available", never a guess.
+ *  `source` is the service that WAS queried (and came back empty) — showing
+ *  it tells the reader where the gap actually is, instead of just "see links". */
+export function naField(label, links, source) {
+  return { label, value: 'Not available — see links', kind: KIND.NA, links, source }
 }
 
 /** An official NSW value, or NA if the lookup came back empty. */
 export function officialField(label, value, source, links) {
-  if (value === null || value === undefined || value === '') return naField(label, links)
+  if (value === null || value === undefined || value === '') return naField(label, links, source)
   return field(label, value, KIND.OFFICIAL, { source, links })
 }

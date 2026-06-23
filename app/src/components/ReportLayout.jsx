@@ -21,7 +21,7 @@ const ReportLayout = forwardRef(function ReportLayout({ site, citations, mapImag
       <section className="report-page report-cover" data-page="cover">
         <div>
           <div className="cover-band" />
-          <div className="cover-eyebrow">Connection to Country · Site brief</div>
+          <div className="cover-eyebrow">Connection to Country · Planning controls · Environment</div>
           <h1>{site.name}</h1>
           <div className="cover-sub">{site.address}</div>
           {mapImage && (

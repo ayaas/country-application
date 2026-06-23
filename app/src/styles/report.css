@@ -144,7 +144,11 @@
 }
 .report-page h2:not(:first-of-type) { margin-top: 34px; }
 
-.report-field { margin-bottom: 16px; }
+/* min-width: 0 overrides the grid/flex default of sizing a cell to its
+   content's intrinsic width — without it, a long unbroken value (a flora
+   list, a URL) forces its column wider than 1fr and bleeds into the next
+   column or off the page edge instead of wrapping. */
+.report-field { margin-bottom: 16px; min-width: 0; }
 .report-field .rf-label {
   font-family: var(--font-mono);
   font-size: 10px;
@@ -159,6 +163,7 @@
   margin-top: 3px;
   letter-spacing: -0.16px;
   color: var(--ink);
+  overflow-wrap: anywhere;
 }
 .report-field .rf-value.muted { color: var(--body); font-weight: 400; }
 .report-field .rf-source {
@@ -167,18 +172,21 @@
   color: var(--body-muted);
   margin-top: 3px;
   letter-spacing: 0.2px;
+  overflow-wrap: anywhere;
 }
 .report-field .rf-note {
   font-size: 12px;
   color: var(--body);
   margin-top: 3px;
   line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .report-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px 32px;
+  min-width: 0;
 }
 
 .report-callout {
