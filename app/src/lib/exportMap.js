@@ -7,6 +7,7 @@
 // every export, regardless of the live map's current state.
 import mapboxgl from 'mapbox-gl'
 import { bboxOf } from './geo.js'
+import { addressPointsInBounds } from './nsw/address.js'
 
 const TOKEN = import.meta.env.VITE_MAPBOX_TOKEN
 const STYLE = 'mapbox://styles/mapbox/light-v11'
@@ -18,6 +19,7 @@ const FIT_PADDING = 56
 const FALLBACK_ZOOM = 17
 
 const PARCEL_SRC = 'export-parcel'
+const HOUSE_SRC = 'export-house-numbers'
 
 /** Render `geometry` (or `center` if there's no parcel) on a fixed-size,
  *  always-flat, always-north-up offscreen map and return a PNG data URL. */
@@ -91,7 +93,7 @@ export function captureSiteMap({ geometry, center }) {
         map.jumpTo({ center, zoom: FALLBACK_ZOOM, bearing: 0, pitch: 0 })
       }
 
-      const done = () => {
+      const capture = () => {
         try {
           cleanup(map.getCanvas().toDataURL('image/png'))
         } catch (e) {
@@ -100,13 +102,45 @@ export function captureSiteMap({ geometry, center }) {
         }
       }
 
+      // Once the camera has settled on the site (fitBounds/jumpTo above is
+      // synchronous, but tiles still need to load), the viewport is final —
+      // fetch house numbers for that exact frame, add them, then capture.
+      const addHouseNumbersThenCapture = async () => {
+        try {
+          const b = map.getBounds()
+          const fc = await addressPointsInBounds([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()])
+          map.addSource(HOUSE_SRC, { type: 'geojson', data: fc })
+          map.addLayer({
+            id: 'export-house-numbers-layer', type: 'symbol', source: HOUSE_SRC,
+            layout: {
+              'text-field': ['get', 'number'],
+              'text-size': 12,
+              'text-allow-overlap': false,
+              'text-font': ['Open Sans Regular', 'Arial Unicode MS Regular'],
+            },
+            paint: {
+              'text-color': '#202030',
+              'text-halo-color': '#ffffff',
+              'text-halo-width': 1.2,
+            },
+          })
+        } catch {
+          // transient NSW service error — still export the plan, just without numbers
+        }
+        if (map.loaded() && map.areTilesLoaded()) capture()
+        else {
+          const t = setTimeout(capture, 2000)
+          map.once('idle', () => { clearTimeout(t); capture() })
+        }
+      }
+
       if (map.loaded() && map.areTilesLoaded()) {
-        done()
+        addHouseNumbersThenCapture()
       } else {
-        const timer = setTimeout(done, 4000)
+        const timer = setTimeout(addHouseNumbersThenCapture, 4000)
         map.once('idle', () => {
           clearTimeout(timer)
-          done()
+          addHouseNumbersThenCapture()
         })
       }
     })
