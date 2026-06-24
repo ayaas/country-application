@@ -25,6 +25,7 @@ export default function App() {
   const [picking, setPicking] = useState(false)
   const [pickError, setPickError] = useState(null)
   const [radiusM, setRadiusM] = useState(200)
+  const [tab, setTab] = useState('official')
 
   const mapRef = useRef(null)
   const reportRef = useRef(null)
@@ -121,18 +122,23 @@ export default function App() {
     ? formatArea(parcels.reduce((s, p) => s + (p.areaM2 || 0), 0))
     : null
 
-  const nearbyCircle = confirmed?.center ? circlePolygon(confirmed.center, radiusM) : null
-  const nearbyPoints = {
-    type: 'FeatureCollection',
-    features: nearby.places
-      .map((p, i) => ({ ...p, i }))
-      .filter((p) => p.center)
-      .map((p) => ({
-        type: 'Feature',
-        geometry: { type: 'Point', coordinates: p.center },
-        properties: { name: p.name, color: colorForIndex(p.i) },
-      })),
-  }
+  // The radius ring + pins are Nearby-tab-specific context — they shouldn't
+  // clutter the map while looking at Official/Country/Environment facts.
+  const showNearbyOverlay = tab === 'nearby'
+  const nearbyCircle = showNearbyOverlay && confirmed?.center ? circlePolygon(confirmed.center, radiusM) : null
+  const nearbyPoints = showNearbyOverlay
+    ? {
+        type: 'FeatureCollection',
+        features: nearby.places
+          .map((p, i) => ({ ...p, i }))
+          .filter((p) => p.center)
+          .map((p) => ({
+            type: 'Feature',
+            geometry: { type: 'Point', coordinates: p.center },
+            properties: { name: p.name, color: colorForIndex(p.i) },
+          })),
+      }
+    : null
 
   return (
     <div className="app-shell">
@@ -204,6 +210,8 @@ export default function App() {
           nearby={nearby}
           radiusM={radiusM}
           onRadiusChange={setRadiusM}
+          tab={tab}
+          onTabChange={setTab}
         />
       </div>
 

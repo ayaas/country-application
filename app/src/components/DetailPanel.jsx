@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import SiteCard from './SiteCard.jsx'
 import { colorForIndex } from '../lib/poi.js'
 
@@ -11,9 +10,9 @@ const TABS = [
 
 const RADIUS_OPTIONS = [100, 200]
 
-export default function DetailPanel({ site, collapsed, onToggle, onExport, exporting, nearby, radiusM, onRadiusChange }) {
-  const [tab, setTab] = useState('official')
-
+export default function DetailPanel({
+  site, collapsed, onToggle, onExport, exporting, nearby, radiusM, onRadiusChange, tab, onTabChange,
+}) {
   return (
     <aside className={`panel ${collapsed ? 'collapsed' : ''}`}>
       <div className="panel-head">
@@ -32,7 +31,7 @@ export default function DetailPanel({ site, collapsed, onToggle, onExport, expor
                 role="tab"
                 aria-selected={tab === t.key}
                 className={tab === t.key ? 'active' : ''}
-                onClick={() => setTab(t.key)}
+                onClick={() => onTabChange(t.key)}
               >
                 {t.label}
               </button>
