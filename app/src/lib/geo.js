@@ -51,6 +51,22 @@ export function centerOf(geometry) {
   return [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2]
 }
 
+/** Approximate circle polygon (GeoJSON) of `radiusM` metres around [lng, lat].
+ *  Good enough at the 100–500 m scale used for the nearby-places radius ring;
+ *  not for anything requiring survey accuracy. */
+export function circlePolygon([lng, lat], radiusM, points = 64) {
+  const earthR = 6371000
+  const latRad = (lat * Math.PI) / 180
+  const ring = []
+  for (let i = 0; i <= points; i++) {
+    const angle = (i / points) * 2 * Math.PI
+    const dLat = ((radiusM * Math.cos(angle)) / earthR) * (180 / Math.PI)
+    const dLng = ((radiusM * Math.sin(angle)) / (earthR * Math.cos(latRad))) * (180 / Math.PI)
+    ring.push([lng + dLng, lat + dLat])
+  }
+  return { type: 'Polygon', coordinates: [ring] }
+}
+
 /** Format an area in m² as a friendly string (m² under 1 ha, else ha). */
 export function formatArea(m2) {
   if (m2 == null || !isFinite(m2)) return null

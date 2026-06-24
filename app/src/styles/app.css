@@ -450,6 +450,33 @@ button { font-family: var(--font-display); cursor: pointer; }
 .panel-section { margin-bottom: var(--s-2xl); }
 .panel-section > .eyebrow { display: block; margin-bottom: var(--s-md); }
 
+/* Nearby-places radius toggle + list */
+.radius-toggle {
+  display: flex;
+  gap: var(--s-xs);
+  margin-bottom: var(--s-md);
+}
+.radius-toggle button {
+  border: 1px solid var(--hairline);
+  background: var(--canvas);
+  color: var(--body);
+  border-radius: var(--r-sm);
+  padding: 6px var(--s-md);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+}
+.radius-toggle button.active { background: var(--ink); color: var(--on-dark); border-color: var(--ink); }
+
+.nearby-card {
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-sm);
+  padding: var(--s-md) var(--s-lg);
+  margin-bottom: var(--s-sm);
+}
+.nearby-card .value { font-size: 14px; font-weight: 500; letter-spacing: -0.16px; }
+.nearby-card .label { font-size: 12.5px; color: var(--body); margin-top: 2px; }
+
 /* Site card */
 .site-card {
   border: 1px solid var(--hairline);

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import mapboxgl from 'mapbox-gl'
 import { addressPointsInBounds } from '../lib/nsw/address.js'
 import { lotsInBounds } from '../lib/nsw/cadastre.js'
+import { featureCollection } from '../lib/geo.js'
 
 const TOKEN = import.meta.env.VITE_MAPBOX_TOKEN
 
@@ -24,7 +25,12 @@ const CADASTRE_SRC = 'cadastre-outlines'
 const CADASTRE_LAYER = 'cadastre-outlines-layer'
 const CADASTRE_MIN_ZOOM = 15
 
-export default function MapView({ styleKey, onMapReady, onParcelClick, flyTarget, parcelData, marker, picking }) {
+const NEARBY_CIRCLE_SRC = 'nearby-circle'
+const NEARBY_POINTS_SRC = 'nearby-points'
+
+export default function MapView({
+  styleKey, onMapReady, onParcelClick, flyTarget, parcelData, marker, picking, nearbyCircle, nearbyPoints,
+}) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const markerRef = useRef(null)
@@ -137,14 +143,34 @@ export default function MapView({ styleKey, onMapReady, onParcelClick, flyTarget
       }, 300)
     }
 
+    function addNearbyLayers() {
+      if (map.getSource(NEARBY_CIRCLE_SRC)) return
+      map.addSource(NEARBY_CIRCLE_SRC, { type: 'geojson', data: emptyFC() })
+      map.addLayer({
+        id: 'nearby-circle-line', type: 'line', source: NEARBY_CIRCLE_SRC,
+        paint: { 'line-color': '#534ab7', 'line-width': 1.5, 'line-dasharray': [2, 2] },
+      })
+      map.addSource(NEARBY_POINTS_SRC, { type: 'geojson', data: emptyFC() })
+      map.addLayer({
+        id: 'nearby-points-layer', type: 'circle', source: NEARBY_POINTS_SRC,
+        paint: {
+          'circle-radius': 5,
+          'circle-color': '#534ab7',
+          'circle-stroke-width': 1.5,
+          'circle-stroke-color': '#ffffff',
+        },
+      })
+    }
+
     map.on('load', () => {
       addParcelLayers()
       addCadastreLayer()
       addHouseLayer()
+      addNearbyLayers()
       onMapReady && onMapReady(map)
     })
     // Re-add custom layers after a basemap style switch.
-    map.on('style.load', () => { addParcelLayers(); addCadastreLayer(); addHouseLayer() })
+    map.on('style.load', () => { addParcelLayers(); addCadastreLayer(); addHouseLayer(); addNearbyLayers() })
     map.on('moveend', refreshHouseNumbers)
     map.on('moveend', refreshCadastreOutlines)
 
@@ -193,6 +219,16 @@ export default function MapView({ styleKey, onMapReady, onParcelClick, flyTarget
         .addTo(map)
     }
   }, [marker])
+
+  // Push nearby-places radius ring + pins
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    const circleSrc = map.getSource(NEARBY_CIRCLE_SRC)
+    if (circleSrc) circleSrc.setData(nearbyCircle ? featureCollection([nearbyCircle]) : emptyFC())
+    const pointsSrc = map.getSource(NEARBY_POINTS_SRC)
+    if (pointsSrc) pointsSrc.setData(nearbyPoints || emptyFC())
+  }, [nearbyCircle, nearbyPoints])
 
   // Fly to a search/confirm target
   useEffect(() => {

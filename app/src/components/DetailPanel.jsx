@@ -5,9 +5,12 @@ const TABS = [
   { key: 'official', label: 'Official' },
   { key: 'country', label: 'Country' },
   { key: 'environment', label: 'Environment' },
+  { key: 'nearby', label: 'Nearby' },
 ]
 
-export default function DetailPanel({ site, collapsed, onToggle, onExport, exporting }) {
+const RADIUS_OPTIONS = [100, 200, 500]
+
+export default function DetailPanel({ site, collapsed, onToggle, onExport, exporting, nearby, radiusM, onRadiusChange }) {
   const [tab, setTab] = useState('official')
 
   return (
@@ -69,6 +72,10 @@ export default function DetailPanel({ site, collapsed, onToggle, onExport, expor
 
             {tab === 'environment' && <Section title="Environment" fields={site.fields.environment} />}
 
+            {tab === 'nearby' && (
+              <NearbySection nearby={nearby} radiusM={radiusM} onRadiusChange={onRadiusChange} />
+            )}
+
             <SourceList citations={site.citations} />
 
             <button
@@ -95,6 +102,46 @@ function Section({ title, fields, footnote }) {
         <SiteCard key={`${f.label}-${i}`} field={f} />
       ))}
       {footnote && <div className="section-foot">{footnote}</div>}
+    </section>
+  )
+}
+
+function NearbySection({ nearby, radiusM, onRadiusChange }) {
+  return (
+    <section className="panel-section">
+      <span className="eyebrow">Nearby places</span>
+      <div className="radius-toggle">
+        {RADIUS_OPTIONS.map((r) => (
+          <button key={r} className={radiusM === r ? 'active' : ''} onClick={() => onRadiusChange(r)}>
+            {r}m
+          </button>
+        ))}
+      </div>
+
+      {nearby.status === 'loading' && <div className="section-foot">Looking up nearby places…</div>}
+      {nearby.status === 'error' && (
+        <div className="section-foot">Nearby places lookup failed — try again shortly.</div>
+      )}
+      {nearby.status === 'ready' && nearby.places.length === 0 && (
+        <div className="section-foot">No named places found within {radiusM}m.</div>
+      )}
+
+      {nearby.places.map((p, i) => (
+        <div className="nearby-card" key={`${p.name}-${i}`}>
+          <div>
+            <div className="value">{p.name}</div>
+            <div className="label">{p.category} · {p.distanceM}m away</div>
+          </div>
+        </div>
+      ))}
+
+      {nearby.places.length > 0 && (
+        <div className="section-foot">
+          Source: Mapbox places data — approximate, general-purpose mapping data, not an
+          official NSW register. Aboriginal cultural/heritage sites are deliberately not
+          shown here — see the Country tab.
+        </div>
+      )}
     </section>
   )
 }

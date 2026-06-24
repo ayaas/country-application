@@ -5,8 +5,9 @@ import NorthArrow from './components/NorthArrow.jsx'
 import DetailPanel from './components/DetailPanel.jsx'
 import ReportLayout from './components/ReportLayout.jsx'
 import { useSiteFacts } from './hooks/useSiteFacts.js'
+import { useNearbyPlaces } from './hooks/useNearbyPlaces.js'
 import { lotAtPoint } from './lib/nsw/cadastre.js'
-import { featureCollection, mergePolygons, centerOf, formatArea } from './lib/geo.js'
+import { featureCollection, mergePolygons, centerOf, formatArea, circlePolygon } from './lib/geo.js'
 import { exportReportPdf } from './lib/exportPdf.js'
 import { captureSiteMap } from './lib/exportMap.js'
 
@@ -22,11 +23,13 @@ export default function App() {
   const [confirmed, setConfirmed] = useState(null)
   const [picking, setPicking] = useState(false)
   const [pickError, setPickError] = useState(null)
+  const [radiusM, setRadiusM] = useState(200)
 
   const mapRef = useRef(null)
   const reportRef = useRef(null)
 
   const site = useSiteFacts(confirmed)
+  const nearby = useNearbyPlaces(confirmed?.center, radiusM)
 
   const handleMapReady = useCallback((map) => { mapRef.current = map }, [])
 
@@ -117,6 +120,14 @@ export default function App() {
     ? formatArea(parcels.reduce((s, p) => s + (p.areaM2 || 0), 0))
     : null
 
+  const nearbyCircle = confirmed?.center ? circlePolygon(confirmed.center, radiusM) : null
+  const nearbyPoints = {
+    type: 'FeatureCollection',
+    features: nearby.places
+      .filter((p) => p.center)
+      .map((p) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: p.center }, properties: { name: p.name } })),
+  }
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -144,6 +155,8 @@ export default function App() {
             parcelData={parcelData}
             marker={confirmed?.approximate ? confirmed.center : null}
             picking={picking}
+            nearbyCircle={nearbyCircle}
+            nearbyPoints={nearbyPoints}
           />
 
           <SearchBar onPick={handlePick} />
@@ -182,6 +195,9 @@ export default function App() {
           onToggle={() => setCollapsed((c) => !c)}
           onExport={handleExport}
           exporting={exporting}
+          nearby={nearby}
+          radiusM={radiusM}
+          onRadiusChange={setRadiusM}
         />
       </div>
 
