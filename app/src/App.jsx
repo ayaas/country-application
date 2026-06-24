@@ -5,12 +5,15 @@ import NorthArrow from './components/NorthArrow.jsx'
 import DetailPanel from './components/DetailPanel.jsx'
 import ReportLayout from './components/ReportLayout.jsx'
 import { useSiteFacts } from './hooks/useSiteFacts.js'
+import { useParcelFacts } from './hooks/useParcelFacts.js'
 import { useNearbyPlaces } from './hooks/useNearbyPlaces.js'
 import { lotAtPoint } from './lib/nsw/cadastre.js'
 import { featureCollection, mergePolygons, centerOf, formatArea, circlePolygon } from './lib/geo.js'
 import { colorForIndex } from './lib/poi.js'
 import { exportReportPdf } from './lib/exportPdf.js'
 import { captureSiteMap, captureNearbyMap } from './lib/exportMap.js'
+
+const MAX_PARCELS = 3
 
 export default function App() {
   const [styleKey, setStyleKey] = useState('streets')
@@ -32,7 +35,9 @@ export default function App() {
   const mapRef = useRef(null)
   const reportRef = useRef(null)
 
-  const site = useSiteFacts(confirmed)
+  const siteRaw = useSiteFacts(confirmed)
+  const parcelFacts = useParcelFacts(parcels)
+  const site = applyParcelFacts(siteRaw, parcelFacts)
   const nearby = useNearbyPlaces(confirmed?.center, radiusM)
 
   const handleMapReady = useCallback((map) => { mapRef.current = map }, [])
@@ -69,16 +74,21 @@ export default function App() {
         setPickError('No cadastral parcel at that point — using an approximate location.')
         return
       }
-      setParcels((prev) => {
-        let next
-        if (multiMode) {
-          next = prev.some((p) => p.id === lot.id) ? prev.filter((p) => p.id !== lot.id) : [...prev, lot]
+      let next
+      if (multiMode) {
+        if (parcels.some((p) => p.id === lot.id)) {
+          next = parcels.filter((p) => p.id !== lot.id)
+        } else if (parcels.length >= MAX_PARCELS) {
+          setPickError(`You can select up to ${MAX_PARCELS} adjoining parcels — clear one first.`)
+          return
         } else {
-          next = [lot]
+          next = [...parcels, lot]
         }
-        confirmFrom(next)
-        return next
-      })
+      } else {
+        next = [lot]
+      }
+      setParcels(next)
+      confirmFrom(next)
     } catch (err) {
       setPickError('Parcel lookup failed — the NSW service may be busy. Try again.')
     } finally {
@@ -242,4 +252,29 @@ export default function App() {
       )}
     </div>
   )
+}
+
+// Stack address/zoning/height/FSR across multiple selected parcels, in pick
+// order. Address always stacks (every parcel has its own); zoning/height/FSR
+// only stack when they actually differ — otherwise the merged single-point
+// value from useSiteFacts already reads correctly.
+function applyParcelFacts(site, parcelFacts) {
+  if (!site || parcelFacts.status !== 'ready' || parcelFacts.items.length < 2) return site
+  const items = parcelFacts.items
+
+  const allSame = (key) => items.every((it) => it[key] === items[0][key])
+  const stacked = (key) => items.map((it, i) => `Parcel ${i + 1}: ${it[key] || 'Not available'}`).join('\n')
+
+  const official = site.fields.official.map((f) =>
+    f.label === 'Address' ? { ...f, value: stacked('address'), kind: items.some((it) => it.address) ? f.kind : 'na' } : f
+  )
+
+  const planning = site.fields.planning.map((f) => {
+    if (f.label === 'Zoning' && !allSame('zoning')) return { ...f, value: stacked('zoning') }
+    if (f.label === 'Height of building' && !allSame('height')) return { ...f, value: stacked('height') }
+    if (f.label === 'Floor space ratio' && !allSame('fsr')) return { ...f, value: stacked('fsr') }
+    return f
+  })
+
+  return { ...site, fields: { ...site.fields, official, planning } }
 }

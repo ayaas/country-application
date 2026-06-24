@@ -30,29 +30,61 @@ function drawFullPage(pdf, canvas, pw, ph, isFirst) {
   pdf.addImage(img, 'JPEG', 0, 0, pw, ph)
 }
 
-// Split `content`'s direct children into groups that each fit within one
-// page's usable height, breaking only between elements — never inside one,
-// so text can't be cut or doubled at a page seam. Each group becomes its own
-// detached .report-page-fixed clone (with the same heading styling), captured
-// and placed on its own PDF page.
+// Group `content`'s direct children into sections, each starting at an <h2>
+// and running up to (not including) the next one — a heading and its content
+// are never allowed to land on different pages.
+function groupIntoSections(children) {
+  const sections = []
+  let current = []
+  for (const child of children) {
+    if (child.tagName === 'H2' && current.length > 0) {
+      sections.push(current)
+      current = []
+    }
+    current.push(child)
+  }
+  if (current.length > 0) sections.push(current)
+  return sections
+}
+
+// Pack sections into groups that each fit within one page's usable height.
+// A whole section moves to the next page rather than splitting a heading
+// from its content; only a section taller than a full page is split
+// internally (between its own children, never inside one).
 function buildContentPageChunks(content, pageNumberStart) {
   const usableH = PAGE_H - PAGE_PAD_TOP - PAGE_PAD_BOTTOM
-  const children = Array.from(content.children)
+  const sections = groupIntoSections(Array.from(content.children))
 
   const groups = []
   let current = []
   let currentH = 0
-  for (const child of children) {
-    const h = child.getBoundingClientRect().height
-    if (current.length > 0 && currentH + h > usableH) {
+
+  const flush = () => {
+    if (current.length > 0) {
       groups.push(current)
       current = []
       currentH = 0
     }
-    current.push(child)
-    currentH += h
   }
-  if (current.length > 0) groups.push(current)
+
+  for (const section of sections) {
+    const sectionH = section.reduce((sum, el) => sum + el.getBoundingClientRect().height, 0)
+
+    if (sectionH <= usableH) {
+      if (current.length > 0 && currentH + sectionH > usableH) flush()
+      current.push(...section)
+      currentH += sectionH
+    } else {
+      flush()
+      for (const child of section) {
+        const h = child.getBoundingClientRect().height
+        if (current.length > 0 && currentH + h > usableH) flush()
+        current.push(child)
+        currentH += h
+      }
+    }
+  }
+  flush()
 
   return groups.map((group, i) => {
     const page = document.createElement('section')

@@ -374,9 +374,14 @@ button { font-family: var(--font-display); cursor: pointer; }
   display: flex;
   flex-direction: column;
   min-height: 0;
-  transition: margin-right 0.22s ease;
+  overflow: hidden;
+  transition: flex-basis 0.22s ease, width 0.22s ease, border-left-width 0.22s ease;
 }
-.panel.collapsed { margin-right: -392px; }
+.panel.collapsed {
+  flex-basis: 0;
+  width: 0;
+  border-left-width: 0;
+}
 
 .panel-head {
   flex: 0 0 auto;
@@ -526,6 +531,7 @@ button { font-family: var(--font-display); cursor: pointer; }
   font-weight: 500;
   margin-top: 2px;
   letter-spacing: -0.16px;
+  white-space: pre-line;
 }
 .site-card .value.muted { color: var(--body-muted); font-weight: 400; }
 .site-card .links { margin-top: var(--s-sm); display: flex; flex-wrap: wrap; gap: var(--s-sm); }

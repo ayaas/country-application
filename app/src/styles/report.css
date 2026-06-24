@@ -167,6 +167,7 @@
   letter-spacing: -0.16px;
   color: var(--ink);
   overflow-wrap: anywhere;
+  white-space: pre-line;
 }
 .report-field .rf-value.muted { color: var(--body); font-weight: 400; }
 .report-field .rf-source {
