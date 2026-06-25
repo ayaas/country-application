@@ -117,7 +117,7 @@ export function useSiteFacts(confirmed) {
           )
         })
 
-      const addressPromise = nearestAddress(center)
+      const addressPromise = nearestAddress(center, { geometry: parcel?.geometry })
         .catch(() => null)
         .then((address) => {
           if (cancelled) return

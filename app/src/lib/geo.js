@@ -51,6 +51,27 @@ export function centerOf(geometry) {
   return [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2]
 }
 
+/** Even-odd ray-cast test, evaluated across every ring of every polygon so
+ *  holes are honoured without needing to know Esri/GeoJSON winding order. */
+export function pointInPolygon([x, y], geometry) {
+  if (!geometry) return false
+  const polys = geometry.type === 'MultiPolygon' ? geometry.coordinates : [geometry.coordinates]
+  let inside = false
+  for (const rings of polys) {
+    for (const ring of rings) {
+      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const [xi, yi] = ring[i]
+        const [xj, yj] = ring[j]
+        if (yi !== yj && y >= Math.min(yi, yj) && y < Math.max(yi, yj)) {
+          const xCross = xi + ((y - yi) / (yj - yi)) * (xj - xi)
+          if (x < xCross) inside = !inside
+        }
+      }
+    }
+  }
+  return inside
+}
+
 /** Approximate circle polygon (GeoJSON) of `radiusM` metres around [lng, lat].
  *  Good enough at the 100–500 m scale used for the nearby-places radius ring;
  *  not for anything requiring survey accuracy. */

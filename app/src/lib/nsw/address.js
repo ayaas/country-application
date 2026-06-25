@@ -3,6 +3,7 @@
 // LIKE query (20–50 s, unindexed), and pick the closest point to the click.
 import { arcgis, envelopeGeom } from './client.js'
 import { LAYERS } from './endpoints.js'
+import { pointInPolygon } from '../geo.js'
 
 function titleCaseAddress(s) {
   if (!s) return s
@@ -10,7 +11,7 @@ function titleCaseAddress(s) {
   return s.toLowerCase().replace(/\b([a-z])/g, (c) => c.toUpperCase())
 }
 
-async function queryNearestAddress(lngLat, half, timeout) {
+async function queryNearestAddress(lngLat, half, timeout, parcelGeometry) {
   const data = await arcgis(`${LAYERS.addressPoint}/query`, {
     geometry: envelopeGeom(lngLat, half),
     geometryType: 'esriGeometryEnvelope',
@@ -22,8 +23,16 @@ async function queryNearestAddress(lngLat, half, timeout) {
     resultRecordCount: '30',
   }, { label: 'address', timeout })
 
-  const feats = data.features || []
+  let feats = data.features || []
   if (feats.length === 0) return null
+
+  // Prefer an address point that actually falls inside the selected parcel —
+  // the parcel's bbox-centre search point can sit closer to a neighbouring
+  // lot's address point than the lot's own, especially for narrow/skewed lots.
+  if (parcelGeometry) {
+    const inside = feats.filter((f) => f.geometry && pointInPolygon([f.geometry.x, f.geometry.y], parcelGeometry))
+    if (inside.length > 0) feats = inside
+  }
 
   const [lng, lat] = lngLat
   let best = null
@@ -83,10 +92,10 @@ export async function addressPointsInBounds([west, south, east, north], { limit 
  *  query — observed 60 ms, 1 s, and 60 s on consecutive calls to the same point.
  *  Two short attempts beat one long one: most slow calls are transient, so a
  *  fast retry usually lands well under the cost of a single 8s+ timeout. */
-export async function nearestAddress(lngLat, { half = 0.0009 } = {}) {
+export async function nearestAddress(lngLat, { half = 0.0009, geometry } = {}) {
   for (const timeout of [4000, 6000]) {
     try {
-      const result = await queryNearestAddress(lngLat, half, timeout)
+      const result = await queryNearestAddress(lngLat, half, timeout, geometry)
       if (result) return result
       return null // genuinely no address point nearby — don't retry a real miss
     } catch {

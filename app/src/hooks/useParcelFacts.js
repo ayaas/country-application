@@ -32,7 +32,7 @@ export function useParcelFacts(parcels) {
       parcels.map(async (p) => {
         const center = centerOf(p.geometry)
         const [address, planning] = await Promise.all([
-          center ? nearestAddress(center).catch(() => null) : null,
+          center ? nearestAddress(center, { geometry: p.geometry }).catch(() => null) : null,
           center ? planningAtPoint(center).catch(() => null) : null,
         ])
         return {
