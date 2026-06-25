@@ -179,7 +179,15 @@ export default function MapView({
     })
 
     mapRef.current = map
+
+    // Mapbox GL doesn't auto-resize when its container's size changes (e.g.
+    // the side panel collapsing/expanding) — without this the canvas keeps
+    // its old dimensions and leaves blank space.
+    const resizeObserver = new ResizeObserver(() => map.resize())
+    resizeObserver.observe(containerRef.current)
+
     return () => {
+      resizeObserver.disconnect()
       map.remove()
       mapRef.current = null
     }

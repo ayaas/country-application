@@ -38,7 +38,8 @@ export async function searchPlaces(query, signal) {
     .map((f) => {
       const p = f.properties || {}
       const ctx = p.context || {}
-      const place = [ctx.place?.name, ctx.region?.name].filter(Boolean).join(', ')
+      const suburb = ctx.locality?.name || ctx.neighborhood?.name || ctx.place?.name
+      const place = [suburb, ctx.region?.name].filter(Boolean).join(', ')
       return {
         name: p.name_preferred || p.name || p.full_address || q,
         place: place || p.place_formatted || '',
