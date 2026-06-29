@@ -28,8 +28,16 @@ const CADASTRE_MIN_ZOOM = 15
 const NEARBY_CIRCLE_SRC = 'nearby-circle'
 const NEARBY_POINTS_SRC = 'nearby-points'
 
+const SUN_LINES_SRC = 'sun-path-lines'
+const SUN_POINTS_SRC = 'sun-path-points'
+const SUN_EQUINOX_SRC = 'sun-path-equinox'
+const SUN_CURRENT_SRC = 'sun-path-current'
+const SUN_GRID_LINES_SRC = 'sun-path-grid-lines'
+const SUN_GRID_LABELS_SRC = 'sun-path-grid-labels'
+
 export default function MapView({
   styleKey, onMapReady, onParcelClick, flyTarget, parcelData, marker, picking, nearbyCircle, nearbyPoints,
+  sunLines, sunPoints, sunEquinoxLine, sunCurrentPoint, sunGridLines, sunGridLabels,
 }) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
@@ -162,15 +170,98 @@ export default function MapView({
       })
     }
 
+    function addSunPathLayers() {
+      if (map.getSource(SUN_LINES_SRC)) return
+
+      // Background polar grid (altitude rings + N/E/S/W spokes) — the same
+      // grid the standalone diagram draws, laid over the real site.
+      map.addSource(SUN_GRID_LINES_SRC, { type: 'geojson', data: emptyFC() })
+      map.addLayer({
+        id: 'sun-path-grid-lines-layer', type: 'line', source: SUN_GRID_LINES_SRC,
+        paint: { 'line-color': '#8a8a9a', 'line-width': 1, 'line-opacity': 0.6 },
+      })
+      map.addSource(SUN_GRID_LABELS_SRC, { type: 'geojson', data: emptyFC() })
+      map.addLayer({
+        id: 'sun-path-grid-labels-layer', type: 'symbol', source: SUN_GRID_LABELS_SRC,
+        layout: {
+          'text-field': ['get', 'compass'],
+          'text-size': 12,
+          'text-allow-overlap': true,
+          'text-font': ['Open Sans Regular', 'Arial Unicode MS Regular'],
+        },
+        paint: { 'text-color': '#5f5e5a', 'text-halo-color': '#ffffff', 'text-halo-width': 1.2 },
+      })
+
+      // Equinox reference line — dashed, drawn separately since Mapbox line
+      // dash patterns aren't data-driven per-feature.
+      map.addSource(SUN_EQUINOX_SRC, { type: 'geojson', data: emptyFC() })
+      map.addLayer({
+        id: 'sun-path-equinox-layer', type: 'line', source: SUN_EQUINOX_SRC,
+        paint: { 'line-color': '#5f5e5a', 'line-width': 2, 'line-dasharray': [2, 2] },
+      })
+
+      map.addSource(SUN_LINES_SRC, { type: 'geojson', data: emptyFC() })
+      map.addLayer({
+        id: 'sun-path-lines-layer', type: 'line', source: SUN_LINES_SRC,
+        paint: {
+          'line-color': ['match', ['get', 'kind'], 'winter', '#185FA5', '#BA7517'],
+          'line-width': 2.5,
+          // Dims to a faint envelope reference when its date isn't selected,
+          // matching the emphasis the panel's mini diagram already shows.
+          'line-opacity': ['case', ['get', 'active'], 1, 0.35],
+        },
+      })
+      map.addSource(SUN_POINTS_SRC, { type: 'geojson', data: emptyFC() })
+      map.addLayer({
+        id: 'sun-path-points-layer', type: 'circle', source: SUN_POINTS_SRC,
+        paint: {
+          'circle-radius': 5,
+          'circle-color': ['match', ['get', 'kind'], 'winter', '#185FA5', '#BA7517'],
+          'circle-stroke-width': 1.5,
+          'circle-stroke-color': '#ffffff',
+        },
+      })
+      map.addLayer({
+        id: 'sun-path-labels-layer', type: 'symbol', source: SUN_POINTS_SRC,
+        layout: {
+          'text-field': ['get', 'label'],
+          'text-size': 11,
+          'text-offset': [0, -1.2],
+          'text-allow-overlap': true,
+          'text-font': ['Open Sans Regular', 'Arial Unicode MS Regular'],
+        },
+        paint: {
+          'text-color': ['match', ['get', 'kind'], 'winter', '#042c53', '#412402'],
+          'text-halo-color': '#ffffff',
+          'text-halo-width': 1.2,
+        },
+      })
+
+      // Scrubber-driven current position — on top of everything else.
+      map.addSource(SUN_CURRENT_SRC, { type: 'geojson', data: emptyFC() })
+      map.addLayer({
+        id: 'sun-path-current-layer', type: 'circle', source: SUN_CURRENT_SRC,
+        paint: {
+          'circle-radius': 7,
+          'circle-color': '#D85A30',
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#ffffff',
+        },
+      })
+    }
+
     map.on('load', () => {
       addParcelLayers()
       addCadastreLayer()
       addHouseLayer()
       addNearbyLayers()
+      addSunPathLayers()
       onMapReady && onMapReady(map)
     })
     // Re-add custom layers after a basemap style switch.
-    map.on('style.load', () => { addParcelLayers(); addCadastreLayer(); addHouseLayer(); addNearbyLayers() })
+    map.on('style.load', () => {
+      addParcelLayers(); addCadastreLayer(); addHouseLayer(); addNearbyLayers(); addSunPathLayers()
+    })
     map.on('moveend', refreshHouseNumbers)
     map.on('moveend', refreshCadastreOutlines)
 
@@ -237,6 +328,22 @@ export default function MapView({
     const pointsSrc = map.getSource(NEARBY_POINTS_SRC)
     if (pointsSrc) pointsSrc.setData(nearbyPoints || emptyFC())
   }, [nearbyCircle, nearbyPoints])
+
+  // Push the sun-path diagram (geographic, so it follows pan/zoom/rotate)
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    const setData = (srcId, data) => {
+      const src = map.getSource(srcId)
+      if (src) src.setData(data || emptyFC())
+    }
+    setData(SUN_LINES_SRC, sunLines)
+    setData(SUN_POINTS_SRC, sunPoints)
+    setData(SUN_EQUINOX_SRC, sunEquinoxLine)
+    setData(SUN_CURRENT_SRC, sunCurrentPoint)
+    setData(SUN_GRID_LINES_SRC, sunGridLines)
+    setData(SUN_GRID_LABELS_SRC, sunGridLabels)
+  }, [sunLines, sunPoints, sunEquinoxLine, sunCurrentPoint, sunGridLines, sunGridLabels])
 
   // Fly to a search/confirm target
   useEffect(() => {

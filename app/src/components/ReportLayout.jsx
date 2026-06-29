@@ -11,7 +11,7 @@ const today = new Date().toLocaleDateString('en-AU', {
 const MAPBOX_ATTRIB = '© Mapbox  © OpenStreetMap  Improve this map. Basemap © Mapbox & OpenStreetMap contributors.'
 
 const ReportLayout = forwardRef(function ReportLayout(
-  { site, citations, mapImage, nearbyPlaces, nearbyMapImage, radiusM },
+  { site, citations, mapImage, nearbyPlaces, nearbyMapImage, radiusM, sunPathImage, climateData },
   ref
 ) {
   const official = site.fields.official.filter((f) => f.kind !== 'loading')
@@ -130,10 +130,56 @@ const ReportLayout = forwardRef(function ReportLayout(
           )
         })()}
 
+        {sunPathImage && (
+          <>
+            <h2>Sun path</h2>
+            <div className="report-sun-image">
+              <img src={sunPathImage} alt={`Sun path over ${site.name}, true north up, captured ${today}`} />
+            </div>
+            <div className="report-nearby-note">
+              {site.name} — captured {today}. Summer and winter solstice paths shown with
+              9am/12pm/3pm sun positions; north arrow top right.
+            </div>
+          </>
+        )}
+
+        {climateData && (() => {
+          const { months, windRose, source, startYear, endYear } = climateData
+          const avg = (key) => Math.round((months.reduce((s, m) => s + m[key], 0) / months.length) * 10) / 10
+          const prevailing = windRose.reduce((a, b) => (b.pct > a.pct ? b : a), windRose[0])
+          const uvPeak = Math.max(...months.map((m) => m.uvIndex))
+          const yearLabel = startYear && endYear ? `${startYear}–${endYear} average` : 'long-term average'
+          const climateFields = [
+            { label: 'Temperature', value: `${avg('tempMaxC')}° / ${avg('tempMinC')}°`, note: 'avg max / min °C' },
+            { label: 'Rainfall', value: `${avg('rainfallMm')} mm`, note: `${avg('rainDays')} rain days/month` },
+            { label: 'Sunshine', value: `${avg('sunshineHrs')} h`, note: 'average per day' },
+            { label: 'UV index', value: String(avg('uvIndex')), note: `peak ${uvPeak} — modelled, clear-sky estimate` },
+            { label: 'Humidity', value: `${avg('humidityPct')}%`, note: 'average' },
+            { label: 'Wind', value: `${avg('windSpeedKmh')} km/h`, note: `mean, prevailing ${prevailing.dir}` },
+          ]
+          return (
+            <>
+              <h2>Climate summary</h2>
+              <div className="report-grid">
+                {climateFields.map((f, i) => (
+                  <div className="report-field" key={i}>
+                    <div className="rf-label">{f.label}</div>
+                    <div className="rf-value">{f.value}</div>
+                    <div className="rf-note">{f.note}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="report-nearby-note">
+                Source: {source} ({yearLabel}){source !== 'Open-Meteo' ? ' — live data unavailable, showing offline reference data' : ''}.
+              </div>
+            </>
+          )
+        })()}
+
         <h2>Sources &amp; citations</h2>
         <ol className="report-citations">
           {citations.map((c, i) => (
-            <li key={i}>{c}</li>
+            <li key={i}>{c.text}</li>
           ))}
           <li>{MAPBOX_ATTRIB}</li>
         </ol>

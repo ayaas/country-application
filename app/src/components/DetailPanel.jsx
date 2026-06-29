@@ -1,11 +1,13 @@
 import SiteCard from './SiteCard.jsx'
 import { colorForIndex } from '../lib/poi.js'
+import SunPathClimatePanel from './SunPathClimatePanel.jsx'
 
 const TABS = [
   { key: 'official', label: 'Official' },
   { key: 'country', label: 'Country' },
   { key: 'environment', label: 'Environment' },
   { key: 'nearby', label: 'Nearby' },
+  { key: 'sunpath', label: 'Sun & climate' },
 ]
 
 const RADIUS_MIN = 100
@@ -14,7 +16,7 @@ const RADIUS_STEP = 10
 
 export default function DetailPanel({
   site, collapsed, onToggle, onExport, exporting, nearby, radiusM, onRadiusChange, tab, onTabChange,
-  bucketFilter, onBucketChange,
+  bucketFilter, onBucketChange, sunPath,
 }) {
   return (
     <aside className={`panel ${collapsed ? 'collapsed' : ''}`}>
@@ -87,7 +89,9 @@ export default function DetailPanel({
               />
             )}
 
-            <SourceList citations={site.citations} />
+            {tab === 'sunpath' && <SunPathClimatePanel sunPath={sunPath} center={site.center} />}
+
+            <SourceList citations={site.citations} tab={tab} />
 
             <button
               className="btn-primary"
@@ -182,14 +186,15 @@ function NearbySection({ nearby, radiusM, onRadiusChange, bucketFilter, onBucket
   )
 }
 
-function SourceList({ citations }) {
-  if (!citations || citations.length === 0) return null
+function SourceList({ citations, tab }) {
+  const shown = (citations || []).filter((c) => c.tabs.includes(tab))
+  if (shown.length === 0) return null
   return (
     <section className="panel-section">
       <span className="eyebrow">Sources &amp; citations</span>
       <ol className="source-list">
-        {citations.map((c, i) => (
-          <li key={i}>{c}</li>
+        {shown.map((c, i) => (
+          <li key={i}>{c.text}</li>
         ))}
       </ol>
     </section>

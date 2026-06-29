@@ -1,0 +1,27 @@
+{
+  "source": "Bureau of Meteorology (Sydney, offline fallback)",
+  "months": [
+    { "month": 1, "tempMaxC": 26.0, "tempMinC": 19.2, "rainfallMm": 102, "rainDays": 9.9, "humidityPct": 64, "windSpeedKmh": 17, "sunshineHrs": 7.5, "uvIndex": 13 },
+    { "month": 2, "tempMaxC": 25.9, "tempMinC": 19.3, "rainfallMm": 118, "rainDays": 10.8, "humidityPct": 67, "windSpeedKmh": 16, "sunshineHrs": 7.0, "uvIndex": 12 },
+    { "month": 3, "tempMaxC": 25.0, "tempMinC": 18.0, "rainfallMm": 129, "rainDays": 11.8, "humidityPct": 68, "windSpeedKmh": 15, "sunshineHrs": 6.8, "uvIndex": 10 },
+    { "month": 4, "tempMaxC": 22.7, "tempMinC": 15.1, "rainfallMm": 127, "rainDays": 10.9, "humidityPct": 68, "windSpeedKmh": 14, "sunshineHrs": 6.5, "uvIndex": 7 },
+    { "month": 5, "tempMaxC": 19.7, "tempMinC": 12.1, "rainfallMm": 121, "rainDays": 10.2, "humidityPct": 70, "windSpeedKmh": 14, "sunshineHrs": 6.0, "uvIndex": 5 },
+    { "month": 6, "tempMaxC": 17.3, "tempMinC": 9.7, "rainfallMm": 131, "rainDays": 10.6, "humidityPct": 71, "windSpeedKmh": 15, "sunshineHrs": 5.8, "uvIndex": 4 },
+    { "month": 7, "tempMaxC": 16.7, "tempMinC": 8.4, "rainfallMm": 97, "rainDays": 8.7, "humidityPct": 68, "windSpeedKmh": 16, "sunshineHrs": 6.3, "uvIndex": 4 },
+    { "month": 8, "tempMaxC": 18.1, "tempMinC": 9.2, "rainfallMm": 80, "rainDays": 8.4, "humidityPct": 64, "windSpeedKmh": 18, "sunshineHrs": 7.0, "uvIndex": 5 },
+    { "month": 9, "tempMaxC": 20.2, "tempMinC": 11.6, "rainfallMm": 68, "rainDays": 8.5, "humidityPct": 61, "windSpeedKmh": 19, "sunshineHrs": 7.3, "uvIndex": 7 },
+    { "month": 10, "tempMaxC": 22.3, "tempMinC": 14.2, "rainfallMm": 77, "rainDays": 9.9, "humidityPct": 61, "windSpeedKmh": 19, "sunshineHrs": 7.2, "uvIndex": 9 },
+    { "month": 11, "tempMaxC": 23.9, "tempMinC": 16.4, "rainfallMm": 83, "rainDays": 10.1, "humidityPct": 61, "windSpeedKmh": 18, "sunshineHrs": 7.4, "uvIndex": 11 },
+    { "month": 12, "tempMaxC": 25.4, "tempMinC": 18.2, "rainfallMm": 78, "rainDays": 9.6, "humidityPct": 62, "windSpeedKmh": 17, "sunshineHrs": 7.6, "uvIndex": 13 }
+  ],
+  "windRose": [
+    { "dir": "N", "pct": 5 },
+    { "dir": "NE", "pct": 20 },
+    { "dir": "E", "pct": 15 },
+    { "dir": "SE", "pct": 15 },
+    { "dir": "S", "pct": 10 },
+    { "dir": "SW", "pct": 15 },
+    { "dir": "W", "pct": 10 },
+    { "dir": "NW", "pct": 10 }
+  ]
+}

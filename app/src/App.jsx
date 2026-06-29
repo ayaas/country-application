@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import MapView from './components/MapView.jsx'
 import SearchBar from './components/SearchBar.jsx'
 import NorthArrow from './components/NorthArrow.jsx'
@@ -7,11 +7,14 @@ import ReportLayout from './components/ReportLayout.jsx'
 import { useSiteFacts } from './hooks/useSiteFacts.js'
 import { useParcelFacts } from './hooks/useParcelFacts.js'
 import { useNearbyPlaces } from './hooks/useNearbyPlaces.js'
+import { useSunPath } from './hooks/useSunPath.js'
 import { lotAtPoint } from './lib/nsw/cadastre.js'
 import { featureCollection, mergePolygons, centerOf, formatArea, circlePolygon } from './lib/geo.js'
 import { colorForIndex } from './lib/poi.js'
 import { exportReportPdf } from './lib/exportPdf.js'
-import { captureSiteMap, captureNearbyMap } from './lib/exportMap.js'
+import { captureSiteMap, captureNearbyMap, captureSunPathMap } from './lib/exportMap.js'
+import { fetchClimateNormals, fallbackClimateNormals } from './lib/climate.js'
+import { arcToLineString, positionToPoint, buildSunPathLayers } from './lib/sunGeo.js'
 
 const MAX_PARCELS = 3
 
@@ -22,6 +25,8 @@ export default function App() {
   const [exporting, setExporting] = useState(false)
   const [mapImage, setMapImage] = useState(null)
   const [nearbyMapImage, setNearbyMapImage] = useState(null)
+  const [sunPathImage, setSunPathImage] = useState(null)
+  const [climateData, setClimateData] = useState(null)
 
   const [parcels, setParcels] = useState([]) // selected Lot records
   const [multiMode, setMultiMode] = useState(false)
@@ -128,6 +133,15 @@ export default function App() {
         setNearbyMapImage(null)
       }
 
+      // Sun-path page: one fixed-frame capture with both solstice lines and
+      // all six 9am/12pm/3pm markers, plus the climate summary numbers —
+      // fetched fresh here (with the same offline fallback as the live tab)
+      // so the report works even if that tab was never opened this session.
+      const sunPathDataUrl = await captureSunPathMap({ geometry: site.geometry, center: site.center })
+      setSunPathImage(sunPathDataUrl)
+      const climate = await fetchClimateNormals(site.center).catch(() => fallbackClimateNormals())
+      setClimateData(climate)
+
       await new Promise((r) => setTimeout(r, 150)) // let report DOM paint the snapshots
       // Prefer the resolved address for the filename; fall back to locality
       // when no AddressPoint matched (site.name is then a status sentence).
@@ -143,6 +157,58 @@ export default function App() {
   const totalAreaLabel = parcels.length
     ? formatArea(parcels.reduce((s, p) => s + (p.areaM2 || 0), 0))
     : null
+
+  // The sun path — solstice/equinox lines, hour markers, the full polar grid,
+  // and the scrubber-driven current position — drawn as real geographic
+  // Mapbox layers (not a screen-space overlay) so they pan, zoom and rotate
+  // with the live map and stay genuinely true-north. One state (useSunPath)
+  // drives both this overlay and the panel's controls/standalone diagram, so
+  // dragging the time scrubber moves the marker here too. Only computed
+  // while the Sun & climate tab is open.
+  const showSunOverlay = tab === 'sunpath'
+  const sunPath = useSunPath(showSunOverlay ? site?.center : null)
+
+  const sunOverlay = useMemo(() => {
+    if (!showSunOverlay || !site?.center) return {}
+
+    // The selected date (summer/winter/equinox/live/year) decides which line
+    // reads as the "active" one — matching the panel's mini diagram, which
+    // already highlights only the relevant arc. Solstice lines stay visible
+    // either way as a faint envelope reference; only their emphasis changes.
+    const activeKinds =
+      sunPath.dateKey === 'year' ? ['summer', 'winter'] : ['summer', 'winter'].filter((k) => k === sunPath.dateKey)
+
+    const { sunLines, sunPoints, sunGridLinesData, sunGridLabelsData, radiusM } = buildSunPathLayers(
+      site.center,
+      site.geometry,
+      activeKinds
+    )
+
+    const showEquinoxLine = sunPath.dateKey === 'equinox' || sunPath.dateKey === 'year'
+    const equinoxLine =
+      showEquinoxLine && sunPath.equinoxArc.length >= 2
+        ? {
+            type: 'FeatureCollection',
+            features: [{ type: 'Feature', properties: {}, geometry: arcToLineString(sunPath.equinoxArc, site.center, radiusM) }],
+          }
+        : { type: 'FeatureCollection', features: [] }
+
+    const currentPoint = sunPath.current
+      ? {
+          type: 'FeatureCollection',
+          features: [{ type: 'Feature', properties: {}, geometry: positionToPoint(sunPath.current, site.center, radiusM) }],
+        }
+      : { type: 'FeatureCollection', features: [] }
+
+    return {
+      sunLines,
+      sunPoints,
+      sunEquinoxLine: equinoxLine,
+      sunCurrentPoint: currentPoint,
+      sunGridLines: sunGridLinesData,
+      sunGridLabels: sunGridLabelsData,
+    }
+  }, [showSunOverlay, site?.center, site?.geometry, sunPath.dateKey, sunPath.equinoxArc, sunPath.current])
 
   // The radius ring + pins are Nearby-tab-specific context — they shouldn't
   // clutter the map while looking at Official/Country/Environment facts.
@@ -191,6 +257,12 @@ export default function App() {
             picking={picking}
             nearbyCircle={nearbyCircle}
             nearbyPoints={nearbyPoints}
+            sunLines={sunOverlay.sunLines}
+            sunPoints={sunOverlay.sunPoints}
+            sunEquinoxLine={sunOverlay.sunEquinoxLine}
+            sunCurrentPoint={sunOverlay.sunCurrentPoint}
+            sunGridLines={sunOverlay.sunGridLines}
+            sunGridLabels={sunOverlay.sunGridLabels}
           />
 
           <SearchBar onPick={handlePick} />
@@ -236,6 +308,7 @@ export default function App() {
           onTabChange={setTab}
           bucketFilter={bucketFilter}
           onBucketChange={setBucketFilter}
+          sunPath={sunPath}
         />
       </div>
 
@@ -248,6 +321,8 @@ export default function App() {
           nearbyPlaces={nearby.places}
           nearbyMapImage={nearbyMapImage}
           radiusM={radiusM}
+          sunPathImage={sunPathImage}
+          climateData={climateData}
         />
       )}
     </div>

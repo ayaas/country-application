@@ -232,25 +232,43 @@ export function useSiteFacts(confirmed) {
   return site
 }
 
+// Each citation is tagged with the tab(s) it's actually used in, so the panel
+// can show only what's relevant to the tab someone's looking at instead of
+// the site's entire bibliography on every tab.
 function buildCitations(site) {
   const c = [
-    'NSW Spatial Services — portal.spatial.nsw.gov.au/server/rest/services (address, cadastre, administrative boundaries)',
+    {
+      text: 'NSW Spatial Services — portal.spatial.nsw.gov.au/server/rest/services (address, cadastre, administrative boundaries)',
+      tabs: ['official'],
+    },
   ]
   if (site.fields.planning?.some((f) => f.kind === KIND.OFFICIAL)) {
-    c.push(
-      `NSW Planning Portal — ePlanning Principal Planning${site.epi ? ' (' + site.epi + ')' : ''}`
-    )
+    c.push({
+      text: `NSW Planning Portal — ePlanning Principal Planning${site.epi ? ' (' + site.epi + ')' : ''}`,
+      tabs: ['official'],
+    })
   }
   if (site.fields.environment?.some((f) => f.kind === KIND.OFFICIAL)) {
-    c.push('Atlas of Living Australia — biocache-ws.ala.org.au (species records within 3 km of the confirmed point)')
+    c.push({
+      text: 'Atlas of Living Australia — biocache-ws.ala.org.au (species records within 3 km of the confirmed point)',
+      tabs: ['environment'],
+    })
   }
   const nationField = site.fields.country?.find((f) => f.label.startsWith('Nation / language group'))
   if (nationField?.kind === KIND.CURATED && nationField.source) {
     const pending = nationField.label.includes('pending review')
-    c.push(`${nationField.source} — drafted from the council's published Acknowledgement of Country${pending ? ', pending review' : ''}`)
+    c.push({
+      text: `${nationField.source} — drafted from the council's published Acknowledgement of Country${pending ? ', pending review' : ''}`,
+      tabs: ['country'],
+    })
   }
-  c.push('AIATSIS Map of Indigenous Australia — aiatsis.gov.au (indicative only; not for land claims or native title)')
-  c.push('NSW Connecting with Country framework — planning.nsw.gov.au')
-  if (site.lalc?.localCouncil) c.push(`${site.lalc.localCouncil} Local Aboriginal Land Council — alc.org.au/lalc`)
+  c.push({
+    text: 'AIATSIS Map of Indigenous Australia — aiatsis.gov.au (indicative only; not for land claims or native title)',
+    tabs: ['country'],
+  })
+  c.push({ text: 'NSW Connecting with Country framework — planning.nsw.gov.au', tabs: ['country'] })
+  if (site.lalc?.localCouncil) {
+    c.push({ text: `${site.lalc.localCouncil} Local Aboriginal Land Council — alc.org.au/lalc`, tabs: ['country'] })
+  }
   return c
 }
